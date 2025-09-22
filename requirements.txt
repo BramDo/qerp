@@ -1,0 +1,9 @@
+qiskit==2.1.*
+qiskit-aer>=0.15
+qiskit-nature>=0.7
+qiskit-algorithms>=0.3
+pyscf>=2.5
+ase>=3.22
+numpy
+scipy
+matplotlib

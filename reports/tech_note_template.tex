@@ -1,0 +1,34 @@
+\documentclass[10pt,a4paper]{article}
+\usepackage[margin=2cm]{geometry}
+\usepackage{amsmath, amssymb, graphicx, booktabs}
+\title{Quantum-Enhanced Reaction Pathway Analysis: DMET + SKQD}
+\author{QAMP Project -- Technical Note (2 pages)}
+\date{}
+\begin{document}\maketitle
+\section*{Motivation}
+Short rationale for embedding and measurement-efficient Krylov for transition regions.
+
+\section*{Methods}
+\textbf{Embedding.} DMET on localized orbitals. Active-space diagnostics (NO occupations, T1).\\
+\textbf{Mapping.} Parity/Bravyi--Kitaev, $Z_2$-tapering.\\
+\textbf{SKQD.} Build Krylov subspace via sampled moments. Estimate $H,S$; solve $Hc=ESc$.\\
+\textbf{Mitigation.} Readout correction (M3), symmetry filters, ZNE.
+
+\section*{Results (MVP)}
+Toy fragment on Aer (GPU). Table: energies vs shots; effect of mitigation.
+
+\section*{Resource Table}
+Qubits, grouped measurements, shot budgets, hardware points.
+
+\section*{Ablations}
+Active-space size, embedding window, mapper/tapering.
+
+\section*{Reproducibility}
+Code pointers, seeds, versions.
+
+\bibliographystyle{unsrt}
+\begin{thebibliography}{9}
+\bibitem{qiskit} Qiskit 2.1 API.
+\bibitem{pyscf} PySCF.
+\end{thebibliography}
+\end{document}
