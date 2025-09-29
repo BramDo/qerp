@@ -16,12 +16,8 @@ from typing import Iterable, List, Sequence, Tuple
 
 from pyscf import gto, scf
 from qiskit.quantum_info import SparsePauliOp
-from qiskit_nature.second_q.drivers import (
-    ElectronicStructureDriverType,
-    ElectronicStructureMoleculeDriver,
-    Molecule,
-)
-from qiskit_nature.second_q.mappers import JordanWignerMapper, ParityMapper, QubitConverter
+from qiskit_nature.second_q.drivers import PySCFDriver
+from qiskit_nature.second_q.mappers import JordanWignerMapper, ParityMapper
 from qiskit_nature.second_q.operators import FermionicOp
 from qiskit_nature.second_q.transformers import ActiveSpaceTransformer
 from qiskit_nature.units import DistanceUnit
@@ -76,16 +72,12 @@ def build_fragment_from_geometry(
     mol = _build_pyscf_molecule(geometry, cfg)
     hf_energy = _run_restricted_hf(mol)
 
-    qiskit_molecule = Molecule(
-        geometry=[(atom, list(coords)) for atom, coords in geometry],
-        charge=cfg.charge,
-        multiplicity=cfg.spin + 1,
-        units=cfg.distance_unit,
-    )
-    driver = ElectronicStructureMoleculeDriver(
-        molecule=qiskit_molecule,
+    driver = PySCFDriver(
+        atom=_format_geometry_for_pyscf(geometry),
         basis=cfg.basis,
-        driver_type=ElectronicStructureDriverType.PYSCF,
+        unit=cfg.distance_unit,
+        charge=cfg.charge,
+        spin=cfg.spin,
     )
     problem = driver.run()
 
@@ -100,11 +92,16 @@ def build_fragment_from_geometry(
 
     fragment_orbitals = tuple(cfg.fragment_orbitals or range(orbitals))
 
-    mapper = _build_mapper(cfg.mapper)
-    converter = QubitConverter(mapper, two_qubit_reduction=cfg.two_qubit_reduction)
-
     fermionic_op = problem_active.hamiltonian.second_q_op()
-    qubit_op = converter.convert(fermionic_op, num_particles=problem_active.num_particles)
+    mapper = _build_mapper(
+        cfg.mapper,
+        num_particles=problem_active.num_particles,
+        two_qubit_reduction=cfg.two_qubit_reduction,
+    )
+    qubit_op = mapper.map(
+        fermionic_op,
+        register_length=problem_active.num_spatial_orbitals * 2,
+    )
 
     return DMETFragment(
         geometry=geometry,
@@ -213,9 +210,19 @@ def _run_restricted_hf(mol: gto.Mole) -> float:
     return float(mf.kernel())
 
 
-def _build_mapper(name: str):
+def _build_mapper(
+    name: str,
+    *,
+    num_particles: tuple[int, int] | None,
+    two_qubit_reduction: bool,
+):
     lowered = name.lower()
     if lowered == "parity":
+        if two_qubit_reduction:
+            if num_particles is None:
+                msg = "Two-qubit reduction requires particle counts."
+                raise ValueError(msg)
+            return ParityMapper(num_particles=num_particles)
         return ParityMapper()
     if lowered in {"jw", "jordan-wigner", "jordan_wigner"}:
         return JordanWignerMapper()
